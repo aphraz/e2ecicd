@@ -12,33 +12,79 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run Tests
         run: npm test
-      
+
+      - name: Determine version increment
+        id: version-increment
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          if [[ "$commit_message" == *"major:"* ]]; then
+            echo "::set-output name=increment::major"
+          elif [[ "$commit_message" == "minor:"* ]]; then
+            echo "::set-output name=increment::minor"
+          elif [[ "$commit_message" == "patch:"* ]]; then
+            echo "::set-output name=increment::patch"
+          else
+            echo "::set-output name=increment::"
+          fi
+
+      - name: Get current version
+        id: get-version
+        run: echo "::set-output name=version::$(cat VERSION)"
+
+      - name: Increment version
+        id: increment-version
+        run: echo "::set-output name=new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump:${{ steps.version-increment.outputs.increment }})"
+
+      - name: Update VERSION file
+        run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
+
+      - name: Tag commit
+        run: git tag "${{ steps.increment-version.outputs.new_version }}"
+
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Docker Build and Push Dev
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:dev .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:dev
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev
         if: github.ref == 'refs/heads/dev'
 
       - name: Docker Build and Push Staging
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:stag .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:stag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-stag .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-stag
         if: github.ref == 'refs/heads/staging'
 
       - name: Docker Build and Push Prod
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:prod .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:prod
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-prod .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-prod
         if: github.ref == 'refs/heads/main'
+      
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                text: `Workflow: ${process.env.AS_WORKFLOW}\nJob: ${process.env.AS_JOB}\nCommit: ${process.env.AS_COMMIT}\nVersion: ${process.env.AS_VERSION}\nRepository: ${process.env.AS_REPO}@${process.env.AS_REF}\nAuthor: ${process.env.AS_AUTHOR}\nStatus: ${{ job.status }}\nDuration: ${process.env.AS_TOOK}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          AS_VERSION: ${{ steps.increment-version.outputs.new_version }}
+        if: always()
