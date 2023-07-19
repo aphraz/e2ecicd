@@ -40,7 +40,7 @@ jobs:
 
       - name: Increment version
         id: increment-version
-        run: echo "::set-output name=new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump:${{ steps.version-increment.outputs.increment }})"
+        run: echo "::set-output name=new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump ${{ steps.version-increment.outputs.increment }})"
 
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
