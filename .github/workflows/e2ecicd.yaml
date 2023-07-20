@@ -52,28 +52,28 @@ jobs:
 
       - name: Commit VERSION file to Dev
         run: |
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git config --global user.email "aphraz@live.com"
           git config --global user.name "Afraz Ahmed"
+          git add VERSION
+          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git push -u origin dev
         if: github.ref == 'refs/heads/dev'  
       
       - name: Commit VERSION file to Staging
         run: |
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git config --global user.email "aphraz@live.com"
           git config --global user.name "Afraz Ahmed"
+          git add VERSION
+          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git push -u origin staging
         if: github.ref == 'refs/heads/staging'
 
       - name: Commit VERSION file to main
         run: |
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git config --global user.email "aphraz@live.com"
           git config --global user.name "Afraz Ahmed"
+          git add VERSION
+          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
           git push -u origin main
         if: github.ref == 'refs/heads/main'    
 
