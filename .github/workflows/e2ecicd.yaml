@@ -29,22 +29,22 @@ jobs:
         run: |
           commit_message=$(git log -1 --pretty=%B)
           if [[ "$commit_message" == *"major:"* ]]; then
-            echo "::set-output name=increment::major"
+            echo "increment=major" >> "$GITHUB_OUTPUT"
           elif [[ "$commit_message" == "minor:"* ]]; then
-            echo "::set-output name=increment::minor"
+            echo "increment=minor" >> "$GITHUB_OUTPUT"
           elif [[ "$commit_message" == "patch:"* ]]; then
-            echo "::set-output name=increment::patch"
+            echo "increment=patch" >> "$GITHUB_OUTPUT"
           else
-            echo "::set-output name=increment::"
+            echo "increment=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get current version
         id: get-version
-        run: echo "::set-output name=version::$(cat VERSION)"
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
 
       - name: Increment version
         id: increment-version
-        run: echo "::set-output name=new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump ${{ steps.version-increment.outputs.increment }})"
+        run: echo "new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
 
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
