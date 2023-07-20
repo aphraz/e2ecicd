@@ -44,7 +44,7 @@ jobs:
 
       - name: Increment version
         id: increment-version
-        run: echo "new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
+        run: echo "new_version=$(docker run --rm -v ${PWD}:/app treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
 
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
