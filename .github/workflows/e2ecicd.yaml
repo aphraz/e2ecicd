@@ -50,31 +50,43 @@ jobs:
       - name: Tag commit
         run: git tag "${{ steps.increment-version.outputs.new_version }}"
 
-      - name: Commit VERSION file to Dev
-        run: |
-          git config --global user.email "aphraz@live.com"
-          git config --global user.name "Afraz Ahmed"
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git push -u origin dev
-        if: github.ref == 'refs/heads/dev'  
-      
-      - name: Commit VERSION file to Staging
-        run: |
-          git config --global user.email "aphraz@live.com"
-          git config --global user.name "Afraz Ahmed"
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git push -u origin staging
+      - uses: EndBug/add-and-commit@v9
+        name: Commit VERSION file to Dev 
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin dev --force
+          tag_push: "${{ steps.increment-version.outputs.new_version }}"
+        if: github.ref == 'refs/heads/dev'
+
+      - uses: EndBug/add-and-commit@v9 
+        name: Commit VERSION file to Staging
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin staging --force
+          tag_push: "${{ steps.increment-version.outputs.new_version }}"
         if: github.ref == 'refs/heads/staging'
 
-      - name: Commit VERSION file to main
-        run: |
-          git config --global user.email "aphraz@live.com"
-          git config --global user.name "Afraz Ahmed"
-          git add VERSION
-          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git push -u origin main
+      - uses: EndBug/add-and-commit@v9 
+        name: Commit VERSION file to Prod
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin main --force
+          tag_push: "${{ steps.increment-version.outputs.new_version }}"
         if: github.ref == 'refs/heads/main'    
 
       - name: Login to DockerHub
