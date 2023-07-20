@@ -50,11 +50,32 @@ jobs:
       - name: Tag commit
         run: git tag "${{ steps.increment-version.outputs.new_version }}"
 
-      - name: Commit VERSION file
+      - name: Commit VERSION file to Dev
         run: |
           git add VERSION
           git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git push
+          git config user.email "aphraz@live.com"
+          git config user.name "Afraz Ahmed"
+          git push -u origin dev
+        if: github.ref == 'refs/heads/dev'  
+      
+      - name: Commit VERSION file to Staging
+        run: |
+          git add VERSION
+          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
+          git config user.email "aphraz@live.com"
+          git config user.name "Afraz Ahmed"
+          git push -u origin staging
+        if: github.ref == 'refs/heads/staging'
+
+      - name: Commit VERSION file to main
+        run: |
+          git add VERSION
+          git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
+          git config user.email "aphraz@live.com"
+          git config user.name "Afraz Ahmed"
+          git push -u origin main
+        if: github.ref == 'refs/heads/main'    
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
