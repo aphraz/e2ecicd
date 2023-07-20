@@ -49,9 +49,6 @@ jobs:
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
 
-      - name: Tag commit
-        run: git tag "${{ steps.increment-version.outputs.new_version }}"
-
       - uses: EndBug/add-and-commit@v9
         name: Commit VERSION file to Dev 
         with:
@@ -62,7 +59,8 @@ jobs:
           message: 'Updating VERSION file'
           pathspec_error_handling: ignore
           push: origin dev --force
-          tag_push: "${{ steps.increment-version.outputs.new_version }}"
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
         if: github.ref == 'refs/heads/dev'
 
       - uses: EndBug/add-and-commit@v9 
@@ -75,7 +73,8 @@ jobs:
           message: 'Updating VERSION file'
           pathspec_error_handling: ignore
           push: origin staging --force
-          tag_push: "${{ steps.increment-version.outputs.new_version }}"
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
         if: github.ref == 'refs/heads/staging'
 
       - uses: EndBug/add-and-commit@v9 
@@ -88,7 +87,8 @@ jobs:
           message: 'Updating VERSION file'
           pathspec_error_handling: ignore
           push: origin main --force
-          tag_push: "${{ steps.increment-version.outputs.new_version }}"
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
         if: github.ref == 'refs/heads/main'    
 
       - name: Login to DockerHub
