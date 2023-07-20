@@ -54,8 +54,8 @@ jobs:
         run: |
           git add VERSION
           git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git config user.email "aphraz@live.com"
-          git config user.name "Afraz Ahmed"
+          git config --global user.email "aphraz@live.com"
+          git config --global user.name "Afraz Ahmed"
           git push -u origin dev
         if: github.ref == 'refs/heads/dev'  
       
@@ -63,8 +63,8 @@ jobs:
         run: |
           git add VERSION
           git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git config user.email "aphraz@live.com"
-          git config user.name "Afraz Ahmed"
+          git config --global user.email "aphraz@live.com"
+          git config --global user.name "Afraz Ahmed"
           git push -u origin staging
         if: github.ref == 'refs/heads/staging'
 
@@ -72,8 +72,8 @@ jobs:
         run: |
           git add VERSION
           git commit -m "Update VERSION file to ${{ steps.increment-version.outputs.new_version }}"
-          git config user.email "aphraz@live.com"
-          git config user.name "Afraz Ahmed"
+          git config --global user.email "aphraz@live.com"
+          git config --global user.name "Afraz Ahmed"
           git push -u origin main
         if: github.ref == 'refs/heads/main'    
 
