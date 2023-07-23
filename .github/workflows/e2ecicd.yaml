@@ -111,6 +111,23 @@ jobs:
 
       - name: Docker Build and Push Prod
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:prod .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:prod
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-prod .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-prod
         if: github.ref == 'refs/heads/main'
+      
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                text: `Workflow: ${process.env.AS_WORKFLOW}\nJob: ${process.env.AS_JOB}\nCommit: ${process.env.AS_COMMIT}\nVersion: ${process.env.AS_VERSION}\nRepository: ${process.env.AS_REPO}@${process.env.AS_REF}\nAuthor: ${process.env.AS_AUTHOR}\nStatus: ${{ job.status }}\nDuration: ${process.env.AS_TOOK}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          AS_VERSION: ${{ steps.increment-version.outputs.new_version }}
+        if: always()
