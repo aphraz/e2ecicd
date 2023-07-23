@@ -6,35 +6,107 @@ on:
       - main
       - dev
       - staging
+    paths-ignore:
+      - 'VERSION'
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run Tests
         run: npm test
-      
+
+      - name: Determine version increment
+        id: version-increment
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          if [[ "$commit_message" == *"major:"* ]]; then
+            echo "increment=major" >> "$GITHUB_OUTPUT"
+          elif [[ "$commit_message" == "minor:"* ]]; then
+            echo "increment=minor" >> "$GITHUB_OUTPUT"
+          elif [[ "$commit_message" == "patch:"* ]]; then
+            echo "increment=patch" >> "$GITHUB_OUTPUT"
+          else
+            echo "increment=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get current version
+        id: get-version
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Increment version
+        id: increment-version
+        run: echo "new_version=$(docker run --rm -v ${PWD}:/app treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
+
+      - name: Update VERSION file
+        run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
+
+      - uses: EndBug/add-and-commit@v9
+        name: Commit VERSION file to Dev 
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin dev --force
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
+        if: github.ref == 'refs/heads/dev'
+
+      - uses: EndBug/add-and-commit@v9 
+        name: Commit VERSION file to Staging
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin staging --force
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
+        if: github.ref == 'refs/heads/staging'
+
+      - uses: EndBug/add-and-commit@v9 
+        name: Commit VERSION file to Prod
+        with:
+          add: 'VERSION'
+          author_name: 'Afraz Ahmed'
+          author_email: 'aphraz@live.com'
+          fetch: false
+          message: 'Updating VERSION file'
+          pathspec_error_handling: ignore
+          push: origin main --force
+          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag_push: '--force'
+        if: github.ref == 'refs/heads/main'    
+
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Docker Build and Push Dev
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:dev .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:dev
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev
         if: github.ref == 'refs/heads/dev'
 
       - name: Docker Build and Push Staging
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:stag .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:stag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-stag .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-stag
         if: github.ref == 'refs/heads/staging'
 
       - name: Docker Build and Push Prod
@@ -42,19 +114,3 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:prod .
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:prod
         if: github.ref == 'refs/heads/main'
-      
-      - name: Notify Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,job,commit,repo,ref,author,took
-          custom_payload: |
-            {
-              attachments: [{
-                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
-                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} ${{ job.status }} in ${process.env.AS_TOOK}`,
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
