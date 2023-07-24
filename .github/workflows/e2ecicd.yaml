@@ -48,13 +48,16 @@ jobs:
       - name: Increment version
         id: increment-version
         run: echo "new_version=$(docker run --rm -v ${PWD}:/app treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
-        if: github.ref == 'refs/heads/dev'
-        if: env.release == 'true'
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
 
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
-        if: github.ref == 'refs/heads/dev'
-        if: env.release == 'true'
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
+
 
       - uses: EndBug/add-and-commit@v9
         name: Commit VERSION file to Dev 
@@ -68,8 +71,10 @@ jobs:
           push: origin dev --force
           tag: "${{ steps.increment-version.outputs.new_version }} --force"
           tag_push: '--force'
-        if: github.ref == 'refs/heads/dev'
-        if: env.release == 'true'
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
+
 
       
       - name: Login to DockerHub
