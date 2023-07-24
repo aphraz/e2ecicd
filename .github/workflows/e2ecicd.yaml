@@ -85,9 +85,19 @@ jobs:
 
       - name: Docker Build and Push Dev
         run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-dev .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-dev
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'false'
+      
+      - name: Docker Build and Push Dev-release
+        run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev .
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev
-        if: github.ref == 'refs/heads/dev'
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
 
       - name: Docker Build and Push Staging
         run: |
