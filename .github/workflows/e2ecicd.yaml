@@ -150,6 +150,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
           AS_VERSION: ${{ steps.get-version.outputs.version }}
-        if: | 
-          github.ref == 'refs/heads/dev' &&
-          env.release == 'false'
+        if: env.release == 'false'
