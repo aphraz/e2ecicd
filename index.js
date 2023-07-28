@@ -23,7 +23,7 @@ const server = http.createServer(function(request, response) {
     var html = `
             <html>
                 <body>
-                    <form method="post" action="/">Numbers separated by commas: 
+                    <form method="post" action="/">Numbers: 
                         <input type="text" name="numbers" />
                         <input type="submit" value="Add" />
                     </form>
