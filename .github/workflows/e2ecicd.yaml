@@ -1,6 +1,15 @@
 name: CI/CD Pipeline
 
 on:
+  pull_request:
+    types: 
+      - closed
+    paths-ignore:
+      - 'VERSION'
+    branches:
+      - main
+      - dev
+      - staging
   push:
     branches:
       - main
