@@ -63,6 +63,9 @@ jobs:
           github.ref == 'refs/heads/dev' &&
           env.release == 'true'
 
+      - name: Get updated version
+        id: updated-version
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
 
       - uses: EndBug/add-and-commit@v9
         name: Commit VERSION file to Dev 
@@ -74,7 +77,7 @@ jobs:
           message: 'Updating VERSION file'
           pathspec_error_handling: ignore
           push: origin dev --force
-          tag: "${{ steps.increment-version.outputs.new_version }} --force"
+          tag: "${{ steps.updated-version.outputs.version }} --force"
           tag_push: '--force'
         if: | 
           github.ref == 'refs/heads/dev' &&
@@ -90,30 +93,30 @@ jobs:
 
       - name: Docker Build and Push Dev
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-dev .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-dev
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev
         if: | 
           github.ref == 'refs/heads/dev' &&
           env.release == 'false'
       
       - name: Docker Build and Push Dev-release
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.increment-version.outputs.new_version }}-dev
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev
         if: | 
           github.ref == 'refs/heads/dev' &&
           env.release == 'true'
 
       - name: Docker Build and Push Staging
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-stag .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-stag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-stag .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-stag
         if: github.ref == 'refs/heads/staging'
 
       - name: Docker Build and Push Prod
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-prod .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.get-version.outputs.version }}-prod
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod .
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod
         if: github.ref == 'refs/heads/main'
       
       - name: Notify Slack - Release
@@ -130,7 +133,7 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-          AS_VERSION: ${{ steps.increment-version.outputs.new_version }}
+          AS_VERSION: ${{ steps.updated-version.outputs.version }}
         if: | 
           github.ref == 'refs/heads/dev' &&
           env.release == 'true'
@@ -149,5 +152,5 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-          AS_VERSION: ${{ steps.get-version.outputs.version }}
+          AS_VERSION: ${{ steps.updated-version.outputs.version }}
         if: env.release == 'false'
