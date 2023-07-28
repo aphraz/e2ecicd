@@ -34,22 +34,28 @@ jobs:
         run: |
           commit_message=$(git log -1 --pretty=%B)
           if [[ "$commit_message" == *"major:"* ]]; then
-            echo "::set-output name=increment::major"
+            echo "increment=major" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_ENV"
           elif [[ "$commit_message" == "minor:"* ]]; then
-            echo "::set-output name=increment::minor"
+            echo "increment=minor" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_ENV"
           elif [[ "$commit_message" == "patch:"* ]]; then
-            echo "::set-output name=increment::patch"
+            echo "increment=patch" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_ENV"
           else
-            echo "::set-output name=increment::"
+            echo "release=false" >> "$GITHUB_ENV"
           fi
 
       - name: Get current version
         id: get-version
-        run: echo "::set-output name=version::$(cat VERSION)"
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
 
       - name: Increment version
         id: increment-version
-        run: echo "::set-output name=new_version::$(docker run --rm -v "${PWD}:/app" treeder/bump ${{ steps.version-increment.outputs.increment }})"
+        run: echo "new_version=$(docker run --rm -v ${PWD}:/app treeder/bump ${{ steps.version-increment.outputs.increment }})" >> "$GITHUB_OUTPUT"
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
 
       - name: Update VERSION file
         run: echo "${{ steps.increment-version.outputs.new_version }}" > VERSION
@@ -125,4 +131,23 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
           AS_VERSION: ${{ steps.increment-version.outputs.new_version }}
-        if: always()
+        if: | 
+          github.ref == 'refs/heads/dev' &&
+          env.release == 'true'
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                text: `Workflow: ${process.env.AS_WORKFLOW}\nJob: ${process.env.AS_JOB}\nCommit: ${process.env.AS_COMMIT}\nVersion: ${process.env.AS_VERSION}\nRepository: ${process.env.AS_REPO}@${process.env.AS_REF}\nAuthor: ${process.env.AS_AUTHOR}\nStatus: ${{ job.status }}\nDuration: ${process.env.AS_TOOK}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          AS_VERSION: ${{ steps.get-version.outputs.version }}
+        if: env.release == 'false'
