@@ -190,7 +190,7 @@ jobs:
       - name: Terraform Init 
         run: |
           cd terraform
-          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g"; fi)
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT  
           terraform init \
             -backend-config="bucket=${S3_BUCKET}" \
@@ -198,9 +198,9 @@ jobs:
             -backend-config="region=${S3_REGION}" \
             -backend-config="encrypt=true" \
             -backend-config="dynamodb_table=${DYNAMODB_TABLE}"
-      
+    
       - name: Terraform Apply
         run: |
-          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g"; fi)
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve
