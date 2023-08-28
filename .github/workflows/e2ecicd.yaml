@@ -202,6 +202,7 @@ jobs:
       - name: Terraform Plan
         id: tf-plan
         run: |
+          ls -l
           export exitcode=0
           terraform plan -detailed-exitcode -no-color -out tfplan || export exitcode=$?
 
