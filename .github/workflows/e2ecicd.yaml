@@ -185,8 +185,6 @@ jobs:
       - name: Terraform Init 
         run: |
           cd terraform
-      #    export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-      #    export TF_VAR_environment=$ENVIRONMENT  
           terraform init \
             -backend-config="bucket=${S3_BUCKET}" \
             -backend-config="key=state/${ENVIRONMENT}-env.tfstate" \
@@ -198,8 +196,7 @@ jobs:
         id: tf-plan
         run: |
           cd terraform
-       #   export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-       #   export TF_VAR_environment=$ENVIRONMENT
+       
           export exitcode=0
           terraform plan -detailed-exitcode -no-color  || export exitcode=$?
 
@@ -214,7 +211,5 @@ jobs:
       - name: Terraform Apply
         run: |
           cd terraform
-        #  export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-        #  export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve
         if: ${{ steps.tf-plan.outputs.exitcode }} == 0
