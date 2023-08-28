@@ -174,7 +174,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
       ENVIRONMENT: $(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-      TF_VAR_environment: ${{ env.ENVIRONMENT }}
+      TF_VAR_environment: $(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
