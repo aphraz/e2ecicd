@@ -7,12 +7,12 @@ on:
     paths-ignore:
       - 'VERSION'
     branches:
-      - main
+      - prod
       - dev
       - staging
   push:
     branches:
-      - main
+      - prod
       - dev
       - staging
     paths-ignore:
@@ -126,7 +126,7 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod .
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/prod'
       
       - name: Notify Slack - Release
         uses: 8398a7/action-slack@v3
