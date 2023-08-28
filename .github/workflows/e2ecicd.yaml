@@ -165,9 +165,11 @@ jobs:
   infra:
     runs-on:
       ubuntu-latest
-    run: |
-      export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-      export TF_VAR_environment=$ENVIRONMENT  
+    pre-steps:
+      - name: Set ENV Variables
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          export TF_VAR_environment=$ENVIRONMENT  
     env:
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       S3_REGION: ${{ secrets.S3_REGION }}
