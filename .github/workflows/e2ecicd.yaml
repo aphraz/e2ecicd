@@ -165,11 +165,7 @@ jobs:
   infra:
     runs-on:
       ubuntu-latest
-    pre-steps:
-      - name: Set ENV Variables
-        run: |
-          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-          export TF_VAR_environment=$ENVIRONMENT  
+      
     env:
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       S3_REGION: ${{ secrets.S3_REGION }}
@@ -177,6 +173,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      ENVIRONMENT: $(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+      TF_VAR_environment: ${{ env.ENVIRONMENT }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
