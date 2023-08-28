@@ -202,7 +202,7 @@ jobs:
       - name: Terraform Plan
         id: tf-plan
         run: |
-          ls -l
+          cd terraform
           export exitcode=0
           terraform plan -detailed-exitcode -no-color -out tfplan || export exitcode=$?
 
@@ -217,6 +217,7 @@ jobs:
     
       - name: Terraform Apply
         run: |
+          cd terraform
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve tfplan
