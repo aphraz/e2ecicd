@@ -173,8 +173,6 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-      ENVIRONMENT: $(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-      TF_VAR_environment: $(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -185,6 +183,8 @@ jobs:
       - name: Terraform Init 
         run: |
           cd terraform
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          export TF_VAR_environment=$ENVIRONMENT
           terraform init \
             -backend-config="bucket=${S3_BUCKET}" \
             -backend-config="key=state/${ENVIRONMENT}-env.tfstate" \
@@ -196,7 +196,8 @@ jobs:
         id: tf-plan
         run: |
           cd terraform
-       
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          export TF_VAR_environment=$ENVIRONMENT
           export exitcode=0
           terraform plan -detailed-exitcode -no-color  || export exitcode=$?
 
@@ -211,5 +212,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd terraform
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve
         if: ${{ steps.tf-plan.outputs.exitcode }} == 0
