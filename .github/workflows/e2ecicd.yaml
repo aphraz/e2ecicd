@@ -220,4 +220,3 @@ jobs:
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve tfplan
         if: steps.tf-plan.outputs.exitcode == 2
-        needs: [steps.tf-plan]
