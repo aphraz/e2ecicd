@@ -163,3 +163,33 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
           AS_VERSION: ${{ steps.updated-version.outputs.version }}
         if: env.release == 'false'
+  
+  infra:
+    runs-on:
+      ubuntu-latest
+    env:
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      DYNAMODB_TABLE: ${{ secrets.DYNAMODB_TABLE }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform Environment 
+        run: |
+          cd terraform
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g"; fi)
+          export TF_VAR_environment=$ENVIRONMENT  
+          terraform init \
+            -backend-config="bucket=${S3_BUCKET}" \
+            -backend-config="key=state/${ENVIRONMENT}-env.tfstate" \
+            -backend-config="region=${S3_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="dynamodb_table=${DYNAMODB_TABLE}"
+      
+      - name: Terraform Apply
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g"; fi)
+          export TF_VAR_environment=$ENVIRONMENT
+          terraform apply -auto-approve
