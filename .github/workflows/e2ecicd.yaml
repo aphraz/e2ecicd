@@ -219,4 +219,4 @@ jobs:
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve tfplan
-        if: ${{ steps.tf-plan.outputs.exitcode }} == 2
+        if: ${{ steps.tf-plan.outputs.exitcode == 2 }}
