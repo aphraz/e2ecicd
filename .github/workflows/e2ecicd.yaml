@@ -202,13 +202,13 @@ jobs:
           terraform plan -detailed-exitcode -no-color -out tfplan
           export exitcode=$?
 
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-        
+             
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan Failed!"
             exit 1
           elif [ $exitcode -eq 2 ]; then
-             echo "Infra matches config. Nothing to change"
+             echo "Drift detected. Need to run terraform apply"
+             echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
              exit 0
           else 
             exit 0
@@ -219,4 +219,4 @@ jobs:
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve tfplan
-        if: ${{ steps.tf-plan.outputs.exitcode == 2 }}
+        if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
