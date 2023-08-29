@@ -207,7 +207,7 @@ jobs:
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan Failed!"
             exit 1
-          elseif [ $exitcode -eq 2 ]; then
+          elif [ $exitcode -eq 2 ]; then
              echo "Infra matches config. Nothing to change"
              exit 0
           else 
