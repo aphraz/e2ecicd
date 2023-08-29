@@ -165,6 +165,7 @@ jobs:
   infra:
     runs-on:
       ubuntu-latest
+      
     env:
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       S3_REGION: ${{ secrets.S3_REGION }}
@@ -183,7 +184,7 @@ jobs:
         run: |
           cd terraform
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
-          export TF_VAR_environment=$ENVIRONMENT  
+          export TF_VAR_environment=$ENVIRONMENT
           terraform init \
             -backend-config="bucket=${S3_BUCKET}" \
             -backend-config="key=state/${ENVIRONMENT}-env.tfstate" \
@@ -198,13 +199,17 @@ jobs:
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
           export exitcode=0
-          terraform plan -detailed-exitcode -no-color  || export exitcode=$?
+          terraform plan -detailed-exitcode -no-color -out tfplan
+          export exitcode=$?
 
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
         
           if [ $exitcode -eq 1 ]; then
-            echo Terraform Plan Failed!
-          exit 1
+            echo "Terraform Plan Failed!"
+            exit 1
+          elif [ $exitcode -eq 2 ]; then
+             echo "Infra matches config. Nothing to change"
+             exit 0
           else 
             exit 0
           fi
@@ -213,5 +218,5 @@ jobs:
           cd terraform
           export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
           export TF_VAR_environment=$ENVIRONMENT
-          terraform apply -auto-approve
-        if: ${{ steps.tf-plan.outputs.exitcode }} == 0
+          terraform apply -auto-approve tfplan
+        if: ${{ steps.tf-plan.outputs.exitcode == 2 }}
