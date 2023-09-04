@@ -240,33 +240,10 @@ jobs:
     - name: Configure Kubectl
       run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT}
 
-    - name: Check Ingress Contoller
-      id: check-ingress
-      run: kubectl -n ingress-nginx get pods || echo "install=0" >> "$GITHUB_OUTPUT"
-
-    - name: Install Helm
-      run: |
-        curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-        sudo apt-get install apt-transport-https --yes
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-        sudo apt-get update
-        sudo apt-get install helm
-
-
-    - name: Deploy Ingress Contoller
-      id: deploy-ing
-      run: |
-        helm repo add nginx-stable https://helm.nginx.com/stable
-        helm repo update
-        helm upgrade --install ingress-nginx ingress-nginx \
-           --repo https://kubernetes.github.io/ingress-nginx \
-           --namespace ingress-nginx --create-namespace
-      if: ${{ steps.check-ingress.outputs.install == '0' }}
-
     - name: Get LB hostname
       id: lb-hostname
       run: |
-        kubectl -n ingress-nginx get svc ingress-nginx-controller \
+        kubectl -n kube-system get svc ingress-nginx-controller \
           -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
           echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
 
