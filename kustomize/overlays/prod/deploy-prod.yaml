@@ -8,6 +8,7 @@ spec:
     spec:
       containers:
       - name: nginx
+        image: aphraz/node-app:1.1.1-dev
         imagePullPolicy: Always
         resources:
           limits:
