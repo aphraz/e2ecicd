@@ -7,7 +7,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: "prod.afraz.com"
+  - host: prod.afraz.dev
     http:
       paths:
       - path: /
