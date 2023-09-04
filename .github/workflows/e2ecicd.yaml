@@ -255,7 +255,8 @@ jobs:
     - name: Create Namespace
       run: |
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
-        kubectl create namespace app-${ENVIRONMENT}
+        NAMESPACE=app-${ENVIRONMENT}
+        kubectl get ns ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
 
     - name: Update Image
       run: |
