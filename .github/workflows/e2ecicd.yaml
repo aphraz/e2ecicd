@@ -227,7 +227,7 @@ jobs:
 
     - name: Check Ingress Contoller
       id: check-ingress
-      run: kubectl -n ingress-nginx get pods || echo "install=false" >> "$GITHUB_OUTPUT" && echo "install=true" >> "$GITHUB_OUTPUT"
+      run: kubectl -n ingress-nginx get pods || echo "install=0" >> "$GITHUB_OUTPUT" && echo "install=1" >> "$GITHUB_OUTPUT"
 
     - name: Install Helm
       run: |
@@ -246,7 +246,7 @@ jobs:
         helm upgrade --install ingress-nginx ingress-nginx \
            --repo https://kubernetes.github.io/ingress-nginx \
            --namespace ingress-nginx --create-namespace
-      if: ${{ steps.check-ingress.outputs.install == 'false' }}
+      if: ${{ steps.check-ingress.outputs.install == '0' }}
 
     - name: Get LB hostname
       id: lb-hostname
