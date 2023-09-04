@@ -243,7 +243,7 @@ jobs:
     - name: Get LB hostname
       id: lb-hostname
       run: |
-        kubectl -n kube-system get svc ingress-nginx-controller \
+        kubectl -n ingress-nginx get svc ingress-nginx-controller \
           -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
           echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
 
