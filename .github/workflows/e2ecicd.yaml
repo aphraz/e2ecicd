@@ -227,7 +227,7 @@ jobs:
 
     - name: Check Ingress Contoller
       id: check-ingress
-      run: kubectl -n ingress-nginx get pods || echo "install=0" >> "$GITHUB_OUTPUT" && echo "install=1" >> "$GITHUB_OUTPUT"
+      run: kubectl -n ingress-nginx get pods || echo "install=0" >> "$GITHUB_OUTPUT"
 
     - name: Install Helm
       run: |
