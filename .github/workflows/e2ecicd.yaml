@@ -223,7 +223,7 @@ jobs:
         sudo ./aws/install --update
 
     - name: Configure Kubectl
-      run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig \ --name e2ecicd-eks-${ENVIRONMENT}
+      run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT}
 
     - name: Check Ingress Contoller
       id: check-ingress
