@@ -261,7 +261,7 @@ jobs:
       run: |
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         image=${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
-        sed -e -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}
+        sed -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}
 
     - name: Install Kustomized Manifests
       run: |
