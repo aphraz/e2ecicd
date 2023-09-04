@@ -188,7 +188,6 @@ jobs:
     - name: Terraform Init
       run: |
         cd terraform
-        #export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         export TF_VAR_environment=$ENVIRONMENT
         terraform init \
@@ -204,10 +203,18 @@ jobs:
     - name: Terraform Apply
       run: |
         cd terraform
-        export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         export TF_VAR_environment=$ENVIRONMENT
         terraform apply -auto-approve tfplan
       if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
+
+    - name: Publish EKS cluster name
+      id: eks-cluster
+      run: |
+        cd terraform
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
+        export TF_VAR_environment=$ENVIRONMENT
+        echo "cluster-name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
 
     - name: Install Kubectl
       uses: azure/setup-kubectl@v3
@@ -222,10 +229,10 @@ jobs:
 
     - name: Configure Kubectl
       run: |
-        export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         export TF_VAR_environment=$ENVIRONMENT
-        aws eks --region $(terraform output -raw region) update-kubeconfig \
-        --name $(terraform output -raw cluster_name)
+        aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig \
+        --name ${{ steps.eks-cluster.outputs.cluster-name }}
 
     - name: Install Helm
       run: |
@@ -254,18 +261,18 @@ jobs:
 
     - name: Create Namespace
       run: |
-        export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         kubectl create namespace app-${ENVIRONMENT}
 
     - name: Update Image
       run: |
-        export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         image=${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
         sed -e -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}
 
     - name: Install Kustomized Manifests
       run: |
-        export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         kubectl apply -k kustomize/overlays/${ENVIRONMENT}
 
 
