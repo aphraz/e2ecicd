@@ -208,14 +208,6 @@ jobs:
         terraform apply -auto-approve tfplan
       if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
 
-    - name: Publish EKS cluster name
-      id: eks-cluster
-      run: |
-        cd terraform
-        export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
-        export TF_VAR_environment=$ENVIRONMENT
-        cluster=$(terraform output -raw cluster_name)
-        echo -n "cluster-name=${cluster}" >> "$GITHUB_OUTPUT"
 
     - name: Install Kubectl
       uses: azure/setup-kubectl@v3
@@ -233,7 +225,7 @@ jobs:
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         export TF_VAR_environment=$ENVIRONMENT
         aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig \
-        --name ${{ steps.eks-cluster.outputs.cluster-name }}
+        --name e2ecicd-eks-${ENVIRONMENT}
 
     - name: Install Helm
       run: |
