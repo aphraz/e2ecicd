@@ -167,7 +167,7 @@ jobs:
         AS_VERSION: ${{ steps.updated-version.outputs.version }}
       if: env.release == 'false'
 
-  infra and deployment:
+  deployment:
     needs: build
     runs-on: ubuntu-latest
 
