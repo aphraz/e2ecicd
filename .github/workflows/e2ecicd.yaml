@@ -253,7 +253,7 @@ jobs:
       run: |
         kubectl -n ingress-nginx get svc ingress-nginx-controller \
           -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
-          echo "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
+          echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
 
     - name: Create Namespace
       run: |
@@ -264,6 +264,11 @@ jobs:
       run: |
         image=${{ secrets.DOCKER_USERNAME }}/node-app:${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
         sed -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}/deploy-${ENVIRONMENT}.yaml
+
+    - name: Update Host Address
+      run: |
+        hostAddr=${{ steps.lb-hostname.outputs.hostname }}
+        sed -i "s|host: .*|host: ${hostAddr}|" kustomize/overlays/${ENVIRONMENT}/ingress-${ENVIRONMENT}.yaml
 
     - name: Install Kustomized Manifests
       run: kubectl apply -k kustomize/overlays/${ENVIRONMENT}
