@@ -199,7 +199,9 @@ jobs:
 
     - name: Terraform Plan
       id: tf-plan
-      run: "cd terraform\nexport ENVIRONMENT=$(echo \"${{ github.ref }}\" | sed -e \"s/refs\\/heads\\///g\")\nexport TF_VAR_environment=$ENVIRONMENT\nexport exitcode=0\nterraform plan -detailed-exitcode -no-color -out tfplan\nexport exitcode=$?\n      #magic___^_^___line\n  if [ $exitcode -eq 1 ]; then\n    echo \"Terraform Plan Failed!\"\n    exit 1\n  elif [ $exitcode -eq 2 ]; then\n     echo \"Drift detected. Need to run terraform apply\"\n     echo \"exitcode=$exitcode\" >> $GITHUB_OUTPUT\n     exit 0\n  else \n    exit 0\n  fi\n      #magic___^_^___line\n      #magic___^_^___line\n"
+      run: "cd terraform\nexport ENVIRONMENT=${{ needs.build.outputs.currentENV }}\nexport TF_VAR_environment=$ENVIRONMENT\nexport exitcode=0\nterraform plan -detailed-exitcode -no-color -out tfplan\nexport exitcode=$?\nif [ $exitcode -eq 1 ]; then\n  echo \"Terraform Plan Failed!\"\n  exit 1\nelif [ $exitcode -eq 2 ]; then\n   echo \"Drift detected. Need to run terraform apply\"\n   echo \"exitcode=$exitcode\" >> $GITHUB_OUTPUT\n   exit 0\nelse \n  exit 0\nfi\n      #magic___^_^___line\n"
+
+
     - name: Terraform Apply
       run: |
         cd terraform
@@ -227,6 +229,12 @@ jobs:
         aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig \
         --name e2ecicd-eks-${ENVIRONMENT}
 
+    - name: Check Ingress Contoller
+      id: check-ingress
+      run: |
+        kubectl -n ingress-nginx get pods || echo "install=false" >> "$GITHUB_OUTPUT" \
+        && echo "install=true" >> "$GITHUB_OUTPUT"
+
     - name: Install Helm
       run: |
         curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
@@ -244,6 +252,7 @@ jobs:
         helm upgrade --install ingress-nginx ingress-nginx \
            --repo https://kubernetes.github.io/ingress-nginx \
            --namespace ingress-nginx --create-namespace
+      if: ${{ steps.check-ingress.outputs.install == 'false' }}
 
     - name: Get LB hostname
       id: lb-hostname
@@ -261,7 +270,7 @@ jobs:
     - name: Update Image
       run: |
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
-        image=${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
+        image=${{ secrets.DOCKER_USERNAME }}/node-app:${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
         sed -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}/deploy-${ENVIRONMENT}.yaml
 
     - name: Install Kustomized Manifests
@@ -269,7 +278,9 @@ jobs:
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         kubectl apply -k kustomize/overlays/${ENVIRONMENT}
 
-
+    - name: Rollout Restart Deployment
+      run: kubectl -n app-${{ needs.build.outputs.currentENV }} rollout restart deployment web-deployment
+      if: ${{ needs.build.outputs.releaseTrue == 'false' }}
 
     - name: Set DNS on Cloudflare
       uses: rez0n/create-dns-record@v2.1
