@@ -8,9 +8,9 @@ locals {
 
   # Instance type for each environment
   instance_type = {
-    dev     = "t2.micro"
-    staging = "t2.small"
-    prod    = "t2.medium"
+    dev     = "t3.small"
+    staging = "t3.medium"
+    prod    = "t3.large"
   }
 
   # Number of desired instances for each environment
