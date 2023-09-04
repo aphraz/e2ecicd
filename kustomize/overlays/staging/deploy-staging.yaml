@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: nginx
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "750m"
+            memory: "512Mi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1

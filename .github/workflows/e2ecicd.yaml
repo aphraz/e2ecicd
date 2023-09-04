@@ -20,6 +20,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      releaseTrue: ${{steps.release-status.outptus.rel-status}}
+      currentVersion: ${{ steps.updated-version.outputs.version }}
 
     steps:
       - name: Checkout Code
@@ -52,7 +55,11 @@ jobs:
           else
             echo "release=false" >> "$GITHUB_ENV"
           fi
-
+      - name: Publish Release Status
+        id: release-status
+        run: echo "rel-status=${{ env.release }}" >> "$GITHUB_OUTPUT" 
+      
+      
       - name: Get current version
         id: get-version
         run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
@@ -102,18 +109,9 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev .
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev
-        if: | 
-          github.ref == 'refs/heads/dev' &&
-          env.release == 'false'
-      
-      - name: Docker Build and Push Dev-release
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev .
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev
-        if: | 
-          github.ref == 'refs/heads/dev' &&
-          env.release == 'true'
-
+        if: github.ref == 'refs/heads/dev'
+       
+           
       - name: Docker Build and Push Staging
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-stag .
@@ -162,7 +160,8 @@ jobs:
           AS_VERSION: ${{ steps.updated-version.outputs.version }}
         if: env.release == 'false'
   
-  infra:
+  infra and deployment:
+    needs: build
     runs-on:
       ubuntu-latest
       
@@ -172,7 +171,7 @@ jobs:
       DYNAMODB_TABLE: ${{ secrets.DYNAMODB_TABLE }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -220,3 +219,75 @@ jobs:
           export TF_VAR_environment=$ENVIRONMENT
           terraform apply -auto-approve tfplan
         if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
+      
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      - name: Configure Kubectl
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          export TF_VAR_environment=$ENVIRONMENT
+          aws eks --region $(terraform output -raw region) update-kubeconfig \
+          --name $(terraform output -raw cluster_name)
+      
+      - name: Install Helm
+        run: |
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          sudo apt-get install apt-transport-https --yes
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          sudo apt-get update
+          sudo apt-get install helm
+
+
+      - name: Deploy Ingress Contoller
+        id: deploy-ing
+        run: |
+          helm repo add nginx-stable https://helm.nginx.com/stable
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx \
+             --repo https://kubernetes.github.io/ingress-nginx \
+             --namespace ingress-nginx --create-namespace
+      
+      - name: Get LB hostname
+        id: lb-hostname
+        run: |
+          kubectl -n ingress-nginx get svc ingress-nginx-controller \
+            -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
+            echo "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
+      
+      - name: Create Namespace
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          kubectl create namespace app-${ENVIRONMENT}
+
+      - name: Update Image
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          image=${{ needs.build.outputs.currentVersion }}-${ENVIRONMENT}
+          sed -e -i "s|image: .*$|image: ${image}|" kustomize/overlays/${ENVIRONMENT}
+
+      - name: Install Kustomized Manifests
+        run: |
+          export ENVIRONMENT=$(echo "${{ github.ref }}" | sed -e "s/refs\/heads\///g")
+          kubectl apply -k kustomize/overlays/${ENVIRONMENT}
+          
+
+
+      - name: Set DNS on Cloudflare
+        uses: rez0n/create-dns-record@v2.1
+        with:
+          type: "CNAME"
+          name: "$(echo ${{ github.ref }} | sed -e 's/refs\/heads\///g').afraz.dev"
+          content: ${{ steps.lb-hostname.outputs.hostname }}
+          ttl: 1
+          proxied: true
+          token: ${{ secrets.CLOUDFLARE_TOKEN }}
+          zone: ${{ secrets.CLOUDFLARE_ZONE }}
