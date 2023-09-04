@@ -215,7 +215,7 @@ jobs:
         export ENVIRONMENT=${{ needs.build.outputs.currentENV }}
         export TF_VAR_environment=$ENVIRONMENT
         cluster=$(terraform output -raw cluster_name)
-        echo "cluster-name=${cluster}" >> "$GITHUB_OUTPUT"
+        echo -n "cluster-name=${cluster}" >> "$GITHUB_OUTPUT"
 
     - name: Install Kubectl
       uses: azure/setup-kubectl@v3
