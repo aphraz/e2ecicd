@@ -199,12 +199,12 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="dynamodb_table=${DYNAMODB_TABLE}"
 
-    - name: Terraform Plan
-      id: tf-plan
+    - name: Terraform Plan EKS
+      id: tf-plan-eks
       run: |
         cd terraform
         export exitcode=0
-        terraform plan -detailed-exitcode -no-color -out tfplan
+        terraform plan -target="module.eks" -detailed-exitcode -no-color -out tfplan-eks
         export exitcode=$?
 
              
@@ -222,8 +222,8 @@ jobs:
     - name: Terraform Apply
       run: |
         cd terraform
-        terraform apply -target="module.eks" -auto-approve tfplan
-      if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
+        terraform apply -target="module.eks" -auto-approve tfplan-eks
+      if: ${{ steps.tf-plan-eks.outputs.exitcode == '2' }}
 
 
     - name: Install Kubectl
@@ -240,12 +240,33 @@ jobs:
     - name: Configure Kubectl
       run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT}
 
+    - name: Terraform Plan Ingress
+      id: tf-plan-ing
+      run: |
+        cd terraform
+        export exitcode=0
+        terraform plan -target="null_resource.wait_for_ingress_nginx" -detailed-exitcode -no-color -out tfplan-eks
+        export exitcode=$?
+
+             
+        if [ $exitcode -eq 1 ]; then
+          echo "Terraform Plan Failed!"
+          exit 1
+        elif [ $exitcode -eq 2 ]; then
+           echo "Drift detected. Need to run terraform apply"
+           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+           exit 0
+        else 
+          exit 0
+        fi
+    
+    
     - name: Deploy Ingress Controller
       id: ing-deploy
       run: |
         cd terraform
         terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan  
-
+      if: ${{ steps.tf-plan-ing.outputs.exitcode == '2' }}
 
     - name: Get LB hostname
       id: lb-hostname
