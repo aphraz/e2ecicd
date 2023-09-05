@@ -219,7 +219,7 @@ jobs:
           exit 0
         fi
 
-    - name: Terraform Apply
+    - name: Deploy EKS Cluster
       run: |
         cd terraform
         terraform apply -target="module.eks" -auto-approve tfplan-eks
@@ -268,13 +268,7 @@ jobs:
         terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan-ing  
       if: ${{ steps.tf-plan-ing.outputs.exitcode == '2' }}
 
-    - name: Get LB hostname
-      id: lb-hostname
-      run: |
-        kubectl -n ingress-nginx get svc ingress-nginx-controller \
-          -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
-          echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
-
+    
     - name: Create Namespace
       run: |
         NAMESPACE=app-${ENVIRONMENT}
@@ -293,6 +287,14 @@ jobs:
       run: kubectl -n app-${{ needs.build.outputs.currentENV }} rollout restart deployment web-deployment
       if: ${{ needs.build.outputs.releaseTrue == 'false' }}
 
+    - name: Get LB hostname
+      id: lb-hostname
+      run: |
+        kubectl -n ingress-nginx get svc ingress-nginx-controller \
+          -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
+          echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
+    
+    
     - name: Set DNS on Cloudflare
       uses: rez0n/create-dns-record@v2.1
       with:
