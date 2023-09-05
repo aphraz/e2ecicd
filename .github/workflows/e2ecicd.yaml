@@ -245,7 +245,7 @@ jobs:
       run: |
         cd terraform
         export exitcode=0
-        terraform plan -target="null_resource.wait_for_ingress_nginx" -detailed-exitcode -no-color -out tfplan-eks
+        terraform plan -target="null_resource.wait_for_ingress_nginx" -detailed-exitcode -no-color -out tfplan-ing
         export exitcode=$?
 
              
@@ -265,7 +265,7 @@ jobs:
       id: ing-deploy
       run: |
         cd terraform
-        terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan  
+        terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan-ing  
       if: ${{ steps.tf-plan-ing.outputs.exitcode == '2' }}
 
     - name: Get LB hostname
