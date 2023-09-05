@@ -9,7 +9,7 @@ resource "helm_release" "ingress_nginx" {
 
  
 
-  depends_on = [module.eks]
+ 
 }
 
 resource "null_resource" "wait_for_ingress_nginx" {
@@ -27,5 +27,5 @@ resource "null_resource" "wait_for_ingress_nginx" {
     EOF
   }
 
-  depends_on = [helm_release.ingress_nginx, module.eks]
+  depends_on = [helm_release.ingress_nginx]
 }
