@@ -20,3 +20,9 @@ locals {
     prod    = 3
   }
 }
+
+variable "ingress_nginx_namespace" {
+  type        = string
+  description = "The nginx ingress namespace (it will be created if needed)."
+  default     = "ingress-nginx"
+}
