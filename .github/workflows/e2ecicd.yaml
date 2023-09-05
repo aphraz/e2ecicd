@@ -222,7 +222,7 @@ jobs:
     - name: Terraform Apply
       run: |
         cd terraform
-        terraform apply -auto-approve tfplan
+        terraform apply -auto-approve tfplan -target="module.vpc" -target="module.eks"
       if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
 
 
@@ -239,6 +239,12 @@ jobs:
 
     - name: Configure Kubectl
       run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT}
+
+    - name: Deploy Ingress Controller
+      run: |
+        cd terraform
+        terraform apply -auto-approve tfplan -target="helm_release.ingress_nginx" -target="null_resource.wait_for_ingress_nginx" 
+
 
     - name: Get LB hostname
       id: lb-hostname
