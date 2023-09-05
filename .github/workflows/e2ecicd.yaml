@@ -222,7 +222,7 @@ jobs:
     - name: Terraform Apply
       run: |
         cd terraform
-        terraform apply -auto-approve tfplan -target="module.eks"
+        terraform apply -target="module.eks" -auto-approve tfplan
       if: ${{ steps.tf-plan.outputs.exitcode == '2' }}
 
 
@@ -244,7 +244,7 @@ jobs:
       id: ing-deploy
       run: |
         cd terraform
-        terraform apply -auto-approve tfplan -target="null_resource.wait_for_ingress_nginx" 
+        terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan  
 
 
     - name: Get LB hostname
