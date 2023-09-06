@@ -212,9 +212,7 @@ jobs:
         version: 'latest'
 
     - name: Configure Kubectl if EKS running
-      run: aws eks --region ${{ secrets.S3_REGION }} \
-            update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT} \
-            || install -m 600 -D /dev/null ~/.kube/config
+      run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT} || install -m 600 -D /dev/null ~/.kube/config
     
     - name: Terraform Plan EKS
       id: tf-plan-eks
