@@ -13,7 +13,7 @@ resource "null_resource" "kubectl" {
   provisioner "local-exec" {
     command = "aws eks --region ${var.region} update-kubeconfig --name ${local.cluster_name}"
   }
-  depends_on = [module.eks.cluster_name]
+  depends_on = [module.eks]
 }
 
 resource "helm_release" "ingress_nginx" {
@@ -26,7 +26,10 @@ resource "helm_release" "ingress_nginx" {
   create_namespace = true
 
 
-  depends_on = [null_resource.kubectl]
+  depends_on = [
+    module.eks,
+    null_resource.kubectl
+  ]
 
 }
 
