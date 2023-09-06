@@ -9,23 +9,6 @@ provider "helm" {
   }
 }
 
-resource "null_resource" "merge_kubeconfig" {
-  triggers = {
-    always = timestamp()
-  }
-
-  depends_on = [module.eks]
-
-  provisioner "local-exec" {
-    interpreter = ["/bin/bash", "-c"]
-    command = <<EOT
-      set -e
-      echo 'Applying Auth ConfigMap with kubectl...'
-      aws eks wait cluster-active --name '${local.cluster_name}'
-      aws eks update-kubeconfig --name '${local.cluster_name}' --region=${var.region}
-    EOT
-  }
-}
 resource "null_resource" "kubectl" {
   provisioner "local-exec" {
     command = "aws eks --region ${var.region} update-kubeconfig --name ${local.cluster_name}"
@@ -45,7 +28,6 @@ resource "helm_release" "ingress_nginx" {
 
   depends_on = [
     module.eks,
-    null_resource.merge_kubeconfig,
     null_resource.kubectl
   ]
 
