@@ -189,7 +189,13 @@ jobs:
     - name: Terraform CLI Setup
       uses: hashicorp/setup-terraform@v2
 
-    - name: Terraform Init
+    - name: Install AWS CLI
+      run: |
+        curl -sLk "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install --update       
+    
+    - name: Terraform Init EKS
       run: |
         cd terraform
         terraform init \
@@ -199,53 +205,21 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="dynamodb_table=${DYNAMODB_TABLE}"
 
-    - name: Terraform Plan EKS
-      id: tf-plan-eks
-      run: |
-        cd terraform
-        export exitcode=0
-        terraform plan -target="module.eks" -detailed-exitcode -no-color -out tfplan-eks
-        export exitcode=$?
-
-             
-        if [ $exitcode -eq 1 ]; then
-          echo "Terraform Plan Failed!"
-          exit 1
-        elif [ $exitcode -eq 2 ]; then
-           echo "Drift detected. Need to run terraform apply"
-           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-           exit 0
-        else 
-          exit 0
-        fi
-
-    - name: Terraform Apply
-      run: |
-        cd terraform
-        terraform apply -target="module.eks" -auto-approve tfplan-eks
-      if: ${{ steps.tf-plan-eks.outputs.exitcode == '2' }}
-
-
+    
     - name: Install Kubectl
       uses: azure/setup-kubectl@v3
       with:
         version: 'latest'
 
-    - name: Install AWS CLI
-      run: |
-        curl -sLk "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install --update
-
-    - name: Configure Kubectl
-      run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT}
-
-    - name: Terraform Plan Ingress
-      id: tf-plan-ing
+    - name: Configure Kubectl if EKS running
+      run: aws eks --region ${{ secrets.S3_REGION }} update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT} || install -m 600 -D /dev/null ~/.kube/config
+    
+    - name: Terraform Plan EKS
+      id: tf-plan-eks
       run: |
         cd terraform
         export exitcode=0
-        terraform plan -target="null_resource.wait_for_ingress_nginx" -detailed-exitcode -no-color -out tfplan-ing
+        terraform plan -detailed-exitcode -no-color -out tfplan
         export exitcode=$?
 
              
@@ -259,21 +233,13 @@ jobs:
         else 
           exit 0
         fi
-    
-    
-    - name: Deploy Ingress Controller
-      id: ing-deploy
+
+    - name: Deploy EKS Cluster
       run: |
         cd terraform
-        terraform apply -target="null_resource.wait_for_ingress_nginx" -auto-approve tfplan-ing  
-      if: ${{ steps.tf-plan-ing.outputs.exitcode == '2' }}
+        terraform apply -auto-approve tfplan
+      if: ${{ steps.tf-plan-eks.outputs.exitcode == '2' }}
 
-    - name: Get LB hostname
-      id: lb-hostname
-      run: |
-        kubectl -n ingress-nginx get svc ingress-nginx-controller \
-          -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
-          echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
 
     - name: Create Namespace
       run: |
@@ -287,12 +253,28 @@ jobs:
 
 
     - name: Install Kustomized Manifests
-      run: kubectl apply -k kustomize/overlays/${ENVIRONMENT}
+      id: kustomize-deploy
+      run: |
+        kubectl apply -k kustomize/overlays/${ENVIRONMENT} | tee kubeout
+        
+        if grep -q "deployment.*unchanged" kubeout; then
+          echo "needRestart=yes" >> "$GITHUB_OUTPUT"
+        else
+          echo "needRestart=no" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Rollout Restart Deployment
-      run: kubectl -n app-${{ needs.build.outputs.currentENV }} rollout restart deployment web-deployment
-      if: ${{ needs.build.outputs.releaseTrue == 'false' }}
+      run: kubectl -n app-${ENVIRONMENT} rollout restart deployment web-deployment
+      if: ${{ steps.kustomize-deploy.outputs.needRestart == 'yes' }}
 
+    - name: Get LB hostname
+      id: lb-hostname
+      run: |
+        kubectl -n ingress-nginx get svc ingress-nginx-controller \
+          -o jsonpath={'.status.loadBalancer.ingress[0].hostname'} > lb-hostname
+          echo -n "hostname=$(cat lb-hostname)" >> "$GITHUB_OUTPUT"
+    
+    
     - name: Set DNS on Cloudflare
       uses: rez0n/create-dns-record@v2.1
       with:
@@ -303,3 +285,20 @@ jobs:
         proxied: true
         token: ${{ secrets.CLOUDFLARE_TOKEN }}
         zone: ${{ secrets.CLOUDFLARE_ZONE }}
+   
+    - name: Notify Slack - Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        fields: workflow,job,commit,repo,ref,author,took
+        custom_payload: |
+          {
+            attachments: [{
+              color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+              text: `Workflow: ${process.env.AS_WORKFLOW}\nJob: ${process.env.AS_JOB}\nCommit: ${process.env.AS_COMMIT}\nVersion: ${process.env.AS_VERSION}\nDNS: ${process.env.AS_DNS}\nRepository: ${process.env.AS_REPO}@${process.env.AS_REF}\nAuthor: ${process.env.AS_AUTHOR}\nStatus: ${{ job.status }}\nDuration: ${process.env.AS_TOOK}`,
+            }]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        AS_VERSION: ${{ needs.build.outputs.currentVersion }}
+        AS_DNS: "https://${{ needs.build.outputs.currentENV }}.afraz.dev"
