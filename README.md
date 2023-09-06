@@ -1,4 +1,4 @@
-# End-to-End CI/CD Pipeline for Kubernetes Deployment
+# End-to-End CI/CD Pipeline for Simple Node App Deployment on EKS
 
 ## Table of Contents
 
@@ -71,8 +71,8 @@ The `build` job performs several key tasks:
 
 The `deployment` job handles the following:
 
-1. **Terraform Setup**: Initializes Terraform and sets up the backend.
-2. **Terraform Plan and Apply**: Executes `terraform plan` and `terraform apply` to provision infrastructure.
+1. **Terraform Setup**: Initializes Terraform and sets up the backend with different state files.
+2. **Terraform Plan and Apply**: Executes `terraform plan` and `terraform apply` to provision environment specific infrastructure.
 3. **Kubernetes Configuration**: Configures `kubectl` to interact with the Kubernetes cluster.
 4. **Ingress Controller Setup**: Uses Helm to install the ingress controller.
 5. **Application Deployment**: Uses `kubectl` to deploy the `Kustomized` application manifests.
@@ -83,7 +83,7 @@ The `deployment` job handles the following:
 - **Staging Environment**: Uses `t3.medium` EC2 instances and deploys three replicas.
 - **Prod Environment**: Uses `t3.large` EC2 instances and deploys three replicas.
 
-DNS for all environments is managed via Cloudflare and environment-specific subdomains are assigned ie., `dev.afraz.dev`, `staging.afraz.dev` and `prod.afraz.dev`.
+DNS for all environments is automatically managed via Cloudflare and environment-specific subdomains are assigned and pointed to their respective LB hostname (using CNAME) ie., `dev.afraz.dev`, `staging.afraz.dev` and `prod.afraz.dev`.
 
 ## Notifications
 
@@ -91,7 +91,7 @@ Slack notifications are configured to send updates at the end of each job. This 
 
 ## GitOps Principles
 
-The pipeline adheres to GitOps principles, where Git serves as the single source of truth. Any change to the application or infrastructure must be made through a Git commit.
+The pipeline adheres to GitOps principles, where Git serves as the single source of truth. Any change to the application or infrastructure is expected to be made through a Git commit.
 
 
 
