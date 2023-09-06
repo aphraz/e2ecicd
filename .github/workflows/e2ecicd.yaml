@@ -34,10 +34,14 @@ jobs:
         node-version: 18
 
     - name: Install Dependencies
-      run: npm install
+      run: |
+        cd app
+        npm install
 
     - name: Run Tests
-      run: npm test
+      run: |
+        cd app
+        npm test
 
     - name: Determine version increment
       id: version-increment
@@ -114,6 +118,7 @@ jobs:
 
     - name: Docker Build and Push Dev
       run: |
+        cd app
         docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev .
         docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-dev
       if: github.ref == 'refs/heads/dev'
@@ -121,12 +126,14 @@ jobs:
 
     - name: Docker Build and Push Staging
       run: |
+        cd app
         docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-staging .
         docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-staging
       if: github.ref == 'refs/heads/staging'
 
     - name: Docker Build and Push Prod
       run: |
+        cd app
         docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod .
         docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ steps.updated-version.outputs.version }}-prod
       if: github.ref == 'refs/heads/prod'
