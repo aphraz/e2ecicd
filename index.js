@@ -23,7 +23,7 @@ const server = http.createServer(function(request, response) {
     var html = `
             <html>
                 <body>
-                    <h3>Input comma separated integers to add</h3>
+                    <h3>Input comma separated integers to add.</h3>
                     <form method="post" action="/">Numbers: 
                         <input type="text" name="numbers" />
                         <input type="submit" value="Add" />
