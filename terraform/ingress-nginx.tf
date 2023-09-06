@@ -1,5 +1,6 @@
 provider "kubernetes" {
   config_path = "~/.kube/config"
+  cluster_ca_certificate = module.eks.cluster_ca_data
 
 }
 
