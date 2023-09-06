@@ -253,11 +253,19 @@ jobs:
 
 
     - name: Install Kustomized Manifests
-      run: kubectl apply -k kustomize/overlays/${ENVIRONMENT}
+      id: kustomize-deploy
+      run: |
+        kubectl apply -k kustomize/overlays/${ENVIRONMENT} | tee kubeout
+        grep -q "deployment.*unchanged" kubeout
+        if [ $(echo $?) -eq 0 ]; then
+          echo "needRestart=yes" >> "$GITHUB_OUTPUT"
+        else
+          echo "needRestart=no" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Rollout Restart Deployment
       run: kubectl -n app-${ENVIRONMENT} rollout restart deployment web-deployment
-      if: ${{ needs.build.outputs.releaseTrue == 'false' }}
+      if: ${{ step.kustomize-deploy.outputs.needRestart == 'yes' }}
 
     - name: Get LB hostname
       id: lb-hostname
