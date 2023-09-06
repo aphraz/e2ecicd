@@ -26,3 +26,10 @@ variable "ingress_nginx_namespace" {
   description = "The nginx ingress namespace (it will be created if needed)."
   default     = "ingress-nginx"
 }
+
+variable "region" {
+  type        = string
+  default     = "ap-southeast-1"
+
+}
+
