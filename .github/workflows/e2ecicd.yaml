@@ -193,18 +193,7 @@ jobs:
       run: |
         curl -sLk "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip awscliv2.zip
-        sudo ./aws/install --update
-
-    - name: Install Kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-
-    - name: Configure Kubectl if EKS running
-      run: aws eks --region ${{ secrets.S3_REGION }} \
-            update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT} \
-            || install -m 600 -D /dev/null ~/.kube/config
-      
+        sudo ./aws/install --update       
     
     - name: Terraform Init EKS
       run: |
@@ -216,6 +205,17 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="dynamodb_table=${DYNAMODB_TABLE}"
 
+    
+    - name: Install Kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Configure Kubectl if EKS running
+      run: aws eks --region ${{ secrets.S3_REGION }} \
+            update-kubeconfig --name e2ecicd-eks-${ENVIRONMENT} \
+            || install -m 600 -D /dev/null ~/.kube/config
+    
     - name: Terraform Plan EKS
       id: tf-plan-eks
       run: |
