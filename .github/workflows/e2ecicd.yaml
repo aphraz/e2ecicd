@@ -268,7 +268,7 @@ jobs:
       uses: rez0n/create-dns-record@v2.1
       with:
         type: "CNAME"
-        name: "${ENVIRONMENT}.afraz.dev"
+        name: "${{ needs.build.outputs.currentENV }}.afraz.dev"
         content: ${{ steps.lb-hostname.outputs.hostname }}
         ttl: 1
         proxied: true
@@ -290,4 +290,4 @@ jobs:
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         AS_VERSION: ${{ needs.build.outputs.currentVersion }}
-        AS_DNS: "https://${ENVIRONMENT}.afraz.dev"
+        AS_DNS: "https://${{ needs.build.outputs.currentENV }}.afraz.dev"
