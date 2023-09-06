@@ -265,7 +265,7 @@ jobs:
 
     - name: Rollout Restart Deployment
       run: kubectl -n app-${ENVIRONMENT} rollout restart deployment web-deployment
-      if: ${{ step.kustomize-deploy.outputs.needRestart == 'yes' }}
+      if: ${{ steps.kustomize-deploy.outputs.needRestart == 'yes' }}
 
     - name: Get LB hostname
       id: lb-hostname
