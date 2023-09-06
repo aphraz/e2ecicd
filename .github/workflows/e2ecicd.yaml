@@ -256,8 +256,8 @@ jobs:
       id: kustomize-deploy
       run: |
         kubectl apply -k kustomize/overlays/${ENVIRONMENT} | tee kubeout
-        grep -q "deployment.*unchanged" kubeout
-        if [ $(echo $?) -eq 0 ]; then
+        
+        if grep -q "deployment.*unchanged" kubeout; then
           echo "needRestart=yes" >> "$GITHUB_OUTPUT"
         else
           echo "needRestart=no" >> "$GITHUB_OUTPUT"
